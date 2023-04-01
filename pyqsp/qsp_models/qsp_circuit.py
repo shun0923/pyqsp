@@ -1,13 +1,11 @@
-import cirq
+import qulacs
 import numpy as np
-import sympy
-from cirq.contrib.svg import SVGCircuit
 
 
-class QSPCircuit(cirq.Circuit):
+class QSPCircuit(qulacs.QuantumCircuit):
     """QSP circuit
 
-    A `cirq.Circuit` that implements the QSP sequence given by `phis`
+    A `qulacs.QuantumCircuit` that implements the QSP sequence given by `phis`
 
     A tool to evaluate and visualize the response of a given QSP sequence.
 
@@ -15,23 +13,21 @@ class QSPCircuit(cirq.Circuit):
     """
 
     def __init__(self, phis):
-        super(QSPCircuit, self).__init__()
+        super(QSPCircuit, self).__init__(1)
         # recall that in the QSP sequence we rotate as exp(i * phi * Z), but
         # rz(theta) := exp(i * theta/2 * Z)
-        self.phis = np.array(phis).flatten() * (-2)
-        self.theta = sympy.Symbol("theta")
-        self.q = cirq.GridQubit(0, 0)
-        self._build_qsp_sequence(self.q)
+        self.phis = np.array(phis).flatten() * 2
+        self.q = 0
 
-    def _build_qsp_sequence(self, q):
-        self.append(cirq.Circuit(cirq.rz(self.phis[0])(q)))
+    def build_qsp_sequence(self, theta):
+        self.add_RZ_gate(self.q, self.phis[0])
         for phi in self.phis[1:]:
-            c = cirq.Circuit(cirq.rx(self.theta)(q), cirq.rz(phi)(q))
-            self.append(c)
+            self.add_RX_gate(self.q, theta)
+            self.add_RZ_gate(self.q, phi)
 
     def svg(self):
         """Get the SVG circuit (for visualization)"""
-        return SVGCircuit(self)
+        return None  # SVGCircuit(self)
 
     def qsp_response(self, thetas):
         """Evaluate the QSP response for a list of thetas
@@ -64,9 +60,11 @@ class QSPCircuit(cirq.Circuit):
         """
         pxs = []
         for theta in np.array(thetas).flatten():
-            resolver = cirq.ParamResolver({"theta": theta * (-2)})
-            u = cirq.resolve_parameters(self, resolver).unitary()
-            pxs.append(u[0, 0])
+            circ = self.build_qsp_sequence(theta * 2)
+            state = qulacs.QuantumState(1)
+            state.set_zero_state()
+            circ.update_quantum_state(state)
+            pxs.append(state.get_amplitude(0))
         return np.array(pxs)
 
     def eval_real_px(self, thetas):
@@ -92,10 +90,12 @@ class QSPCircuit(cirq.Circuit):
         """
         qxs = []
         for theta in np.array(thetas).flatten():
-            resolver = cirq.ParamResolver({"theta": theta * (-2)})
-            u = cirq.resolve_parameters(self, resolver).unitary()
+            circ = self.build_qsp_sequence(theta * 2)
+            state = qulacs.QuantumState(1)
+            state.set_computational_basis(0b1)
+            circ.update_quantum_state(state)
             denom = np.sin(theta)
             if denom==0:
                 denom = 1.0e-8
-            qxs.append(u[0, 1] / (1j * denom))
+            qxs.append(state.get_amplitude(0) / (1j * denom))
         return np.array(qxs)
