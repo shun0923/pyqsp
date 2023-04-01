@@ -4,7 +4,7 @@ import unittest
 import numpy as np
 # import tensorflow as tf
 
-from pyqsp import qsp_models
+# from pyqsp import qsp_models
 
 class Test_qsp_models(unittest.TestCase):
     '''
