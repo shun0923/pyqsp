@@ -2,10 +2,10 @@ import qulacs
 import numpy as np
 
 
-class QSPCircuit(qulacs.QuantumCircuit):
+class QSPCircuit():
     """QSP circuit
 
-    A `qulacs.QuantumCircuit` that implements the QSP sequence given by `phis`
+    # A `qulacs.QuantumCircuit` that implements the QSP sequence given by `phis`
 
     A tool to evaluate and visualize the response of a given QSP sequence.
 
@@ -13,17 +13,18 @@ class QSPCircuit(qulacs.QuantumCircuit):
     """
 
     def __init__(self, phis):
-        super(QSPCircuit, self).__init__(1)
         # recall that in the QSP sequence we rotate as exp(i * phi * Z), but
         # rz(theta) := exp(i * theta/2 * Z)
         self.phis = np.array(phis).flatten() * 2
         self.q = 0
 
     def build_qsp_sequence(self, theta):
-        self.add_RZ_gate(self.q, self.phis[0])
+        self.circ = qulacs.QuantumCircuit(1)
+        self.circ.add_RZ_gate(self.q, self.phis[0])
         for phi in self.phis[1:]:
-            self.add_RX_gate(self.q, theta)
-            self.add_RZ_gate(self.q, phi)
+            self.circ.add_RX_gate(self.q, theta)
+            self.circ.add_RZ_gate(self.q, phi)
+        return self.circ
 
     def svg(self):
         """Get the SVG circuit (for visualization)"""
